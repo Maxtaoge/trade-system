@@ -10,20 +10,26 @@ import ai.techfin.tradesystem.service.ModelOrderService;
 import ai.techfin.tradesystem.service.dto.ModelOrderDTO;
 import ai.techfin.tradesystem.web.rest.vm.ModelOrderListTwoDimArrayVM;
 import ai.techfin.tradesystem.web.rest.vm.ModelOrderListVM;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.security.access.annotation.Secured;
-import org.springframework.web.bind.annotation.*;
-
-import javax.validation.constraints.NotNull;
 import java.time.Instant;
 import java.util.HashSet;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import javax.validation.constraints.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.access.annotation.Secured;
+import org.springframework.util.ObjectUtils;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api")
@@ -38,11 +44,8 @@ public class ModelOrderController {
     private final ModelOrderService modelOrderService;
 
     @Autowired
-    public ModelOrderController(
-        ModelOrderListRepository modelOrderListRepository,
-        ProductAccountRepository productAccountRepository,
-        ModelOrderService modelOrderService
-    ) {
+    public ModelOrderController(ModelOrderListRepository modelOrderListRepository,
+        ProductAccountRepository productAccountRepository, ModelOrderService modelOrderService) {
         this.modelOrderListRepository = modelOrderListRepository;
         this.productAccountRepository = productAccountRepository;
         this.modelOrderService = modelOrderService;
@@ -54,7 +57,7 @@ public class ModelOrderController {
     public void create(@RequestBody ModelOrderListTwoDimArrayVM vm) {
         String productName = vm.getProduct();
         Optional<Product> product = productAccountRepository.findByName(productName);
-        if (product.isEmpty()) {
+        if (ObjectUtils.isEmpty(product)) {
             throw new NoSuchElementException();
         }
         HashSet<ModelOrder> sellOrders = vm.getSellOrders();
@@ -69,14 +72,11 @@ public class ModelOrderController {
 
     @GetMapping("/model-order-list")
     @Secured(AuthoritiesConstants.TRADER)
-    public List<ModelOrderListVM> queryModelOrderListInVM(
-        @RequestParam @NotNull Instant begin,
-        @RequestParam @NotNull Instant end,
-        @RequestParam @NotNull Long productId
-    ) {
+    public List<ModelOrderListVM> queryModelOrderListInVM(@RequestParam @NotNull Instant begin,
+        @RequestParam @NotNull Instant end, @RequestParam @NotNull Long productId) {
         logger.info("going to select between: {} to {}", begin, end);
         Optional<Product> product = productAccountRepository.findById(productId);
-        if (product.isEmpty()) {
+        if (ObjectUtils.isEmpty(product)) {
             return null;
         }
 
@@ -87,20 +87,14 @@ public class ModelOrderController {
             return null;
         }
 
-        return orderLists.stream().map(
-            orderList -> {
-                List<ModelOrderDTO> placements =
-                    orderList.getOrders().stream()
-                        .map(order -> modelOrderService.createDTO(order, product.get().getProvider()))
-                        .collect(Collectors.toList());
+        return orderLists.stream().map(orderList -> {
+            List<ModelOrderDTO> placements = orderList.getOrders().stream()
+                .map(order -> modelOrderService.createDTO(order, product.get().getProvider()))
+                .collect(Collectors.toList());
 
-                return new ModelOrderListVM(
-                    placements, orderList.getModel(),
-                    product.get().getName(),
-                    orderList.getCreatedAt(), orderList.getId()
-                );
-            }
-        ).collect(Collectors.toList());
+            return new ModelOrderListVM(placements, orderList.getModel(), product.get().getName(),
+                orderList.getCreatedAt(), orderList.getId());
+        }).collect(Collectors.toList());
     }
 
 }

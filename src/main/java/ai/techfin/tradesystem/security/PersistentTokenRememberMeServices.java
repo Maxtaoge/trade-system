@@ -4,9 +4,13 @@ import ai.techfin.tradesystem.domain.PersistentToken;
 import ai.techfin.tradesystem.repository.PersistentTokenRepository;
 import ai.techfin.tradesystem.repository.UserRepository;
 import ai.techfin.tradesystem.service.util.RandomUtil;
-
 import io.github.jhipster.security.PersistentTokenCache;
-
+import java.io.Serializable;
+import java.time.LocalDate;
+import java.util.Arrays;
+import java.util.Optional;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataAccessException;
@@ -14,22 +18,20 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
-import org.springframework.security.web.authentication.rememberme.*;
+import org.springframework.security.web.authentication.rememberme.AbstractRememberMeServices;
+import org.springframework.security.web.authentication.rememberme.CookieTheftException;
+import org.springframework.security.web.authentication.rememberme.InvalidCookieException;
+import org.springframework.security.web.authentication.rememberme.RememberMeAuthenticationException;
 import org.springframework.stereotype.Service;
-
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import java.io.Serializable;
-import java.time.LocalDate;
-import java.util.*;
+import org.springframework.util.ObjectUtils;
 
 /**
  * Custom implementation of Spring Security's RememberMeServices.
  * <p>
  * Persistent tokens are used by Spring Security to automatically log in users.
  * <p>
- * This is a specific implementation of Spring Security's remember-me authentication, but it is much
- * more powerful than the standard implementations:
+ * This is a specific implementation of Spring Security's remember-me authentication, but it is much more powerful than
+ * the standard implementations:
  * <ul>
  * <li>It allows a user to see the list of his currently opened sessions, and invalidate them</li>
  * <li>It stores more information, such as the IP address and the user agent, for audit purposes<li>
@@ -51,18 +53,13 @@ import java.util.*;
  * couldn't be cleanly extended.
  */
 @Service
-public class PersistentTokenRememberMeServices extends
-    AbstractRememberMeServices {
-
-    private final Logger log = LoggerFactory.getLogger(PersistentTokenRememberMeServices.class);
+public class PersistentTokenRememberMeServices extends AbstractRememberMeServices {
 
     // Token is valid for one month
     private static final int TOKEN_VALIDITY_DAYS = 31;
-
     private static final int TOKEN_VALIDITY_SECONDS = 60 * 60 * 24 * TOKEN_VALIDITY_DAYS;
-
     private static final long UPGRADED_TOKEN_VALIDITY_MILLIS = 5000L;
-
+    private final Logger log = LoggerFactory.getLogger(PersistentTokenRememberMeServices.class);
     private final PersistentTokenCache<UpgradedRememberMeToken> upgradedTokenCache;
 
     private final PersistentTokenRepository persistentTokenRepository;
@@ -70,8 +67,8 @@ public class PersistentTokenRememberMeServices extends
     private final UserRepository userRepository;
 
     public PersistentTokenRememberMeServices(SecurityProperties securityProperties,
-                                             UserDetailsService userDetailsService,
-                                             PersistentTokenRepository persistentTokenRepository, UserRepository userRepository) {
+        UserDetailsService userDetailsService, PersistentTokenRepository persistentTokenRepository,
+        UserRepository userRepository) {
         super(securityProperties.getRememberMeKey(), userDetailsService);
         this.persistentTokenRepository = persistentTokenRepository;
         this.userRepository = userRepository;
@@ -114,8 +111,8 @@ public class PersistentTokenRememberMeServices extends
     }
 
     @Override
-    protected void onLoginSuccess(HttpServletRequest request, HttpServletResponse response, Authentication
-        successfulAuthentication) {
+    protected void onLoginSuccess(HttpServletRequest request, HttpServletResponse response,
+        Authentication successfulAuthentication) {
 
         String login = successfulAuthentication.getName();
 
@@ -141,11 +138,11 @@ public class PersistentTokenRememberMeServices extends
     /**
      * When logout occurs, only invalidate the current token, and not all user sessions.
      * <p>
-     * The standard Spring Security implementations are too basic: they invalidate all tokens for the
-     * current user, so when he logs out from one browser, all his other sessions are destroyed.
+     * The standard Spring Security implementations are too basic: they invalidate all tokens for the current user, so
+     * when he logs out from one browser, all his other sessions are destroyed.
      *
-     * @param request the request.
-     * @param response the response.
+     * @param request        the request.
+     * @param response       the response.
      * @param authentication the authentication.
      */
     @Override
@@ -170,13 +167,13 @@ public class PersistentTokenRememberMeServices extends
      */
     private PersistentToken getPersistentToken(String[] cookieTokens) {
         if (cookieTokens.length != 2) {
-            throw new InvalidCookieException("Cookie token did not contain " + 2 +
-                " tokens, but contained '" + Arrays.asList(cookieTokens) + "'");
+            throw new InvalidCookieException(
+                "Cookie token did not contain " + 2 + " tokens, but contained '" + Arrays.asList(cookieTokens) + "'");
         }
         String presentedSeries = cookieTokens[0];
         String presentedToken = cookieTokens[1];
         Optional<PersistentToken> optionalToken = persistentTokenRepository.findById(presentedSeries);
-        if (optionalToken.isEmpty()) {
+        if (ObjectUtils.isEmpty(optionalToken.get())) {
             // No series match, so we can't authenticate using this cookie
             throw new RememberMeAuthenticationException("No persistent token found for series id: " + presentedSeries);
         }
@@ -186,8 +183,8 @@ public class PersistentTokenRememberMeServices extends
         if (!presentedToken.equals(token.getTokenValue())) {
             // Token doesn't match series value. Delete this session and throw an exception.
             persistentTokenRepository.deleteById(token.getSeries());
-            throw new CookieTheftException("Invalid remember-me token (Series/token) mismatch. Implies previous " +
-                "cookie theft attack.");
+            throw new CookieTheftException(
+                "Invalid remember-me token (Series/token) mismatch. Implies previous " + "cookie theft attack.");
         }
         if (token.getTokenDate().plusDays(TOKEN_VALIDITY_DAYS).isBefore(LocalDate.now())) {
             persistentTokenRepository.deleteById(token.getSeries());
@@ -197,9 +194,7 @@ public class PersistentTokenRememberMeServices extends
     }
 
     private void addCookie(PersistentToken token, HttpServletRequest request, HttpServletResponse response) {
-        setCookie(
-            new String[]{token.getSeries(), token.getTokenValue()},
-            TOKEN_VALIDITY_SECONDS, request, response);
+        setCookie(new String[]{token.getSeries(), token.getTokenValue()}, TOKEN_VALIDITY_SECONDS, request, response);
     }
 
     private static class UpgradedRememberMeToken implements Serializable {
@@ -216,8 +211,7 @@ public class PersistentTokenRememberMeServices extends
         }
 
         String getUserLoginIfValid(String[] currentToken) {
-            if (currentToken[0].equals(this.upgradedToken[0]) &&
-                    currentToken[1].equals(this.upgradedToken[1])) {
+            if (currentToken[0].equals(this.upgradedToken[0]) && currentToken[1].equals(this.upgradedToken[1])) {
                 return this.userLogin;
             }
             return null;

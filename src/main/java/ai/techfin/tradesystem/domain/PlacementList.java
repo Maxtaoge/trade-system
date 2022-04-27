@@ -1,13 +1,23 @@
 package ai.techfin.tradesystem.domain;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import javax.persistence.*;
 import java.time.Instant;
 import java.util.HashSet;
 import java.util.Set;
+import javax.persistence.CascadeType;
+import javax.persistence.CollectionTable;
+import javax.persistence.Column;
+import javax.persistence.ElementCollection;
+import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.OneToOne;
+import javax.persistence.Table;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Entity
 @Table(name = "placement_list")
@@ -23,8 +33,7 @@ public class PlacementList {
     private Instant createdAt = Instant.now();
 
     @ElementCollection(targetClass = Placement.class, fetch = FetchType.EAGER)
-    @CollectionTable(name = "placement_list_data",
-                     joinColumns = @JoinColumn(name = "list_id", referencedColumnName = "id"))
+    @CollectionTable(name = "placement_list_data", joinColumns = @JoinColumn(name = "list_id", referencedColumnName = "id"))
     private Set<Placement> placements = new HashSet<>();
 
     @OneToOne(fetch = FetchType.LAZY, mappedBy = "placementList", cascade = CascadeType.ALL)
@@ -35,17 +44,24 @@ public class PlacementList {
         this.placements = placements;
     }
 
-    public PlacementList() {}
+    public PlacementList() {
+    }
 
-    public Long getId() { return id; }
+    public Long getId() {
+        return id;
+    }
 
-    public void setId(Long id) { this.id = id; }
+    public void setId(Long id) {
+        this.id = id;
+    }
 
-    public ModelOrderList getModelOrderList() { return modelOrderList; }
+    public ModelOrderList getModelOrderList() {
+        return modelOrderList;
+    }
 
     /**
-     * Add a relationship between this entity with the given MOL
-     * Will remove the existing(previous) relationship within (this -- this's origin, the given object -- it's origin)
+     * Add a relationship between this entity with the given MOL Will remove the existing(previous) relationship within
+     * (this -- this's origin, the given object -- it's origin)
      *
      * @param modelOrderList set to null to just remove the existing relationship
      */
@@ -54,7 +70,7 @@ public class PlacementList {
         if (modelOrderList == this.modelOrderList) {
             return;
         }
-        var origin = this.modelOrderList;
+        ModelOrderList origin = this.modelOrderList;
         if (modelOrderList == null) {
             // do this side
             this.modelOrderList = null;
@@ -74,13 +90,21 @@ public class PlacementList {
         }
     }
 
-    public Instant getCreatedAt() { return createdAt; }
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
 
-    public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
+    public void setCreatedAt(Instant createdAt) {
+        this.createdAt = createdAt;
+    }
 
-    public Set<Placement> getPlacements() { return placements; }
+    public Set<Placement> getPlacements() {
+        return placements;
+    }
 
-    public void setPlacements(Set<Placement> placements) { this.placements = placements; }
+    public void setPlacements(Set<Placement> placements) {
+        this.placements = placements;
+    }
 
     @Override
     public int hashCode() {

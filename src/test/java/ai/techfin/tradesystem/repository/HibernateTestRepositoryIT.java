@@ -2,6 +2,9 @@ package ai.techfin.tradesystem.repository;
 
 import ai.techfin.tradesystem.TradeSystemApp;
 import ai.techfin.tradesystem.domain.HibernateTestBase;
+import java.util.Arrays;
+import java.util.HashSet;
+import lombok.var;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -10,9 +13,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.kafka.test.context.EmbeddedKafka;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
-
-import java.util.Arrays;
-import java.util.HashSet;
 
 @ExtendWith({SpringExtension.class})
 @SpringBootTest(classes = TradeSystemApp.class)
@@ -25,8 +25,8 @@ class HibernateTestRepositoryIT {
 
     @BeforeEach
     void setUp() {
-        hibernateTestRepository.save(new HibernateTestBase("string 1", "string 2",
-                                                           new HashSet<>(Arrays.asList(1, 2, 3))));
+        hibernateTestRepository
+            .save(new HibernateTestBase("string 1", "string 2", new HashSet<>(Arrays.asList(1, 2, 3))));
     }
 
     @Test
@@ -43,9 +43,9 @@ class HibernateTestRepositoryIT {
     @Test
     void testEntityLoadAndGetProp() {
         HibernateTestBase entity = hibernateTestRepository.findById(1L).get();
-        var prop = entity.getStringValue();
+        String prop = entity.getStringValue();
         var set = entity.getIntegers();
-        for (int x: set) {
+        for (int x : set) {
             System.out.println(x);
         }
     }

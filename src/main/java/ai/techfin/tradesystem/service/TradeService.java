@@ -1,18 +1,27 @@
 package ai.techfin.tradesystem.service;
 
-import ai.techfin.tradesystem.domain.*;
+import ai.techfin.tradesystem.domain.ModelOrder;
+import ai.techfin.tradesystem.domain.ModelOrderList;
+import ai.techfin.tradesystem.domain.Placement;
+import ai.techfin.tradesystem.domain.PlacementList;
+import ai.techfin.tradesystem.domain.Product;
+import ai.techfin.tradesystem.domain.Stock;
+import ai.techfin.tradesystem.domain.XtpAccount;
 import ai.techfin.tradesystem.domain.enums.BrokerType;
 import ai.techfin.tradesystem.domain.enums.PriceType;
 import ai.techfin.tradesystem.domain.enums.TradeType;
 import ai.techfin.tradesystem.repository.ModelOrderListRepository;
 import ai.techfin.tradesystem.repository.PlacementListRepository;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.util.*;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.util.ObjectUtils;
 
 @Service
 @Slf4j
@@ -26,16 +35,13 @@ public class TradeService {
 
     private final PriceService priceService;
 
-    public TradeService(
-        PriceService priceService,
-        ModelOrderListRepository modelOrderListRepository,
-        PlacementListRepository placementListRepository,
-        BrokerServiceFactory brokerServiceFactory) {
+    public TradeService(PriceService priceService, ModelOrderListRepository modelOrderListRepository,
+        PlacementListRepository placementListRepository, BrokerServiceFactory brokerServiceFactory) {
         this.brokerServiceFactory = brokerServiceFactory;
         this.priceService = priceService;
         this.modelOrderListRepository = modelOrderListRepository;
         this.placementListRepository = placementListRepository;
-        for (var provider : BrokerType.values()) {
+        for (BrokerType provider : BrokerType.values()) {
             if (!brokerServiceFactory.getBrokerService(provider).init()) {
                 log.error("Provider: " + provider + " init failed");
             }
@@ -64,7 +70,7 @@ public class TradeService {
     public PlacementList process(Long modelOrderListId, TradeType tradeType) {
         Optional<ModelOrderList> modelOrderListOptional = modelOrderListRepository.findById(modelOrderListId);
         ModelOrderList modelOrderList;
-        if (modelOrderListOptional.isEmpty()) {
+        if (ObjectUtils.isEmpty(modelOrderListOptional.get())) {
             return null;
         } else {
             modelOrderList = modelOrderListOptional.get();
@@ -98,9 +104,8 @@ public class TradeService {
 
         for (ModelOrder modelOrder : orders) {
             BigDecimal price = priceService.getPrice(modelOrder.getStock(), provider);
-            Long quantity =
-                modelOrder.getMoney().divide(price.multiply(hundred), 0, RoundingMode.FLOOR).multiply(hundred)
-                    .longValue();
+            Long quantity = modelOrder.getMoney().divide(price.multiply(hundred), 0, RoundingMode.FLOOR)
+                .multiply(hundred).longValue();
             Placement placement = new Placement(modelOrder.getStock(), quantity, price);
             placements.add(placement);
             if (tradeType == TradeType.SELL) {

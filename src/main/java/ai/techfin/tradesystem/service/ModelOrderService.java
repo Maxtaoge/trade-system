@@ -2,17 +2,15 @@ package ai.techfin.tradesystem.service;
 
 import ai.techfin.tradesystem.domain.ModelOrder;
 import ai.techfin.tradesystem.domain.ModelOrderList;
-import ai.techfin.tradesystem.domain.PlacementList;
 import ai.techfin.tradesystem.domain.Product;
 import ai.techfin.tradesystem.domain.enums.BrokerType;
 import ai.techfin.tradesystem.repository.ModelOrderListRepository;
 import ai.techfin.tradesystem.service.dto.ModelOrderDTO;
+import java.util.NoSuchElementException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-
-import java.util.NoSuchElementException;
 
 @Service
 public class ModelOrderService {
@@ -27,7 +25,7 @@ public class ModelOrderService {
 
     @Autowired
     public ModelOrderService(PriceService priceService, TradeService tradeService,
-                             ModelOrderListRepository modelOrderListRepository) {
+        ModelOrderListRepository modelOrderListRepository) {
         this.priceService = priceService;
         this.tradeService = tradeService;
         this.modelOrderListRepository = modelOrderListRepository;
@@ -40,8 +38,7 @@ public class ModelOrderService {
     public void prepareTrade(ModelOrderList modelOrderList) {
         Product product = modelOrderList.getProduct();
         tradeService.loginProductAccount(product);
-        modelOrderList.getOrders()
-            .forEach(o -> tradeService.subscribeStockPrice(o.getStock(), product.getProvider()));
+        modelOrderList.getOrders().forEach(o -> tradeService.subscribeStockPrice(o.getStock(), product.getProvider()));
     }
 
     public ModelOrderList find(Long id) {
@@ -49,7 +46,7 @@ public class ModelOrderService {
     }
 
     public ModelOrderList findNotNull(Long id) {
-        return modelOrderListRepository.findById(id).orElseThrow();
+        return modelOrderListRepository.findById(id).orElseThrow(NoSuchElementException::new);
     }
 
     public void existsOrThrow(Long id) {

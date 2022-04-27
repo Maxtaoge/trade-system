@@ -5,15 +5,15 @@ import ai.techfin.tradesystem.domain.Placement;
 import ai.techfin.tradesystem.domain.PlacementList;
 import ai.techfin.tradesystem.repository.PlacementListRepository;
 import ai.techfin.xtpms.service.broker.dto.TradeResponseDTO;
+import java.math.BigDecimal;
+import java.util.Optional;
+import javax.validation.constraints.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Service;
-
-import javax.validation.constraints.NotNull;
-import java.math.BigDecimal;
-import java.util.Optional;
+import org.springframework.util.ObjectUtils;
 
 @Service
 public class PlacementService {
@@ -29,7 +29,7 @@ public class PlacementService {
     }
 
     public @NotNull PlacementList findNotNull(Long id) {
-        return placementListRepository.findById(id).orElseThrow();
+        return placementListRepository.findById(id).orElseThrow(ExceptionInInitializerError::new);
     }
 
     @KafkaListener(topics = KafkaTopicConfiguration.XTP_TRADE_SUCCEED, id = "placement")
@@ -42,11 +42,11 @@ public class PlacementService {
         }
         Optional<Placement> placementOptional = placementList.getPlacements().stream()
             .filter(p -> p.getStock().equals(dto.getStock())).findFirst();
-        if (placementOptional.isEmpty()) {
+        if (ObjectUtils.isEmpty(placementOptional.get())) {
             log.warn("an unexpected TradeResponseDTO is received: {}", dto);
             return;
         }
-        var placement = placementOptional.get();
+        Placement placement = placementOptional.get();
         placement.setQuantityDealt(placement.getQuantityDealt() + dto.getQuantity());
         placement.setMoneyDealt(
             dto.getPrice().multiply(BigDecimal.valueOf(dto.getQuantity())).add(placement.getMoneyDealt()));

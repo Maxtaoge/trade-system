@@ -3,23 +3,21 @@ package ai.techfin.xtpms.service.impl;
 import ai.techfin.tradesystem.domain.Stock;
 import ai.techfin.tradesystem.domain.enums.PriceType;
 import ai.techfin.tradesystem.service.BrokerService;
-import ai.techfin.xtpms.service.broker.utils.PriceTypeHelper;
-import ai.techfin.xtpms.service.broker.utils.TickerHelper;
 import ai.techfin.xtpms.adapter.AsyncQuoteApi;
 import ai.techfin.xtpms.adapter.AsyncTradeApi;
+import ai.techfin.xtpms.service.broker.utils.PriceTypeHelper;
+import ai.techfin.xtpms.service.broker.utils.TickerHelper;
 import com.zts.xtp.common.enums.BusinessType;
 import com.zts.xtp.common.enums.PositionEffectType;
 import com.zts.xtp.common.enums.SideType;
 import com.zts.xtp.trade.model.request.OrderInsertRequest;
+import java.math.BigDecimal;
+import java.util.Map;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-
-import java.math.BigDecimal;
-import java.util.Map;
-import java.util.Optional;
 
 @Service("xtp-broker")
 public class XtpService implements BrokerService {
@@ -41,9 +39,10 @@ public class XtpService implements BrokerService {
     }
 
     @Override
-    public boolean buy(String user, Long placementId, Stock stock, Long quantity, BigDecimal price, PriceType priceType) {
+    public boolean buy(String user, Long placementId, Stock stock, Long quantity, BigDecimal price,
+        PriceType priceType) {
         try {
-            if(!tradeInit && !init()){
+            if (!tradeInit && !init()) {
                 LOGGER.error("buy invoke failed, user:{}, reason:{}", user, "Xtp TradeApi Uninitialized");
                 return false;
             }
@@ -51,18 +50,11 @@ public class XtpService implements BrokerService {
                 return false;
             }
             String ticker = stock.getName();
-            OrderInsertRequest req = OrderInsertRequest
-                    .builder()
-                    .orderXtpId("0")
-                    .orderClientId(AsyncTradeApi.clientId)
-                    .ticker(ticker)
-                    .marketType(TickerHelper.getMarket(ticker))
-                    .price(price.doubleValue())
-                    .quantity(quantity)
-                    .priceType(PriceTypeHelper.getPriceType(priceType.name()))
-                    .sideType(SideType.XTP_SIDE_BUY)
-                    .businessType(BusinessType.XTP_BUSINESS_TYPE_CASH)
-                    .positionEffectType(PositionEffectType.XTP_POSITION_EFFECT_CLOSE).build();
+            OrderInsertRequest req = OrderInsertRequest.builder().orderXtpId("0").orderClientId(AsyncTradeApi.clientId)
+                .ticker(ticker).marketType(TickerHelper.getMarket(ticker)).price(price.doubleValue()).quantity(quantity)
+                .priceType(PriceTypeHelper.getPriceType(priceType.name())).sideType(SideType.XTP_SIDE_BUY)
+                .businessType(BusinessType.XTP_BUSINESS_TYPE_CASH)
+                .positionEffectType(PositionEffectType.XTP_POSITION_EFFECT_CLOSE).build();
             boolean invoke = tradeApi.sellOrBuy(req, user, placementId);
             LOGGER.info("buy invoke {} ", invoke);
             return invoke;
@@ -73,9 +65,10 @@ public class XtpService implements BrokerService {
     }
 
     @Override
-    public boolean sell(String user, Long placementId, Stock stock, Long quantity, BigDecimal price, PriceType priceType) {
+    public boolean sell(String user, Long placementId, Stock stock, Long quantity, BigDecimal price,
+        PriceType priceType) {
         try {
-            if(!tradeInit && !init()){
+            if (!tradeInit && !init()) {
                 LOGGER.error("sell invoke failed, user:{}, reason:{}", user, "Xtp TradeApi Uninitialized");
                 return false;
             }
@@ -83,17 +76,11 @@ public class XtpService implements BrokerService {
                 return false;
             }
             String ticker = stock.getName();
-            OrderInsertRequest req = OrderInsertRequest.builder()
-                    .orderXtpId("0")
-                    .orderClientId(AsyncTradeApi.clientId)
-                    .ticker(ticker)
-                    .marketType(TickerHelper.getMarket(ticker))
-                    .price(price.doubleValue())
-                    .quantity(quantity)
-                    .priceType(PriceTypeHelper.getPriceType(priceType.name()))
-                    .sideType(SideType.XTP_SIDE_SELL)
-                    .businessType(BusinessType.XTP_BUSINESS_TYPE_CASH)
-                    .positionEffectType(PositionEffectType.XTP_POSITION_EFFECT_CLOSE).build();
+            OrderInsertRequest req = OrderInsertRequest.builder().orderXtpId("0").orderClientId(AsyncTradeApi.clientId)
+                .ticker(ticker).marketType(TickerHelper.getMarket(ticker)).price(price.doubleValue()).quantity(quantity)
+                .priceType(PriceTypeHelper.getPriceType(priceType.name())).sideType(SideType.XTP_SIDE_SELL)
+                .businessType(BusinessType.XTP_BUSINESS_TYPE_CASH)
+                .positionEffectType(PositionEffectType.XTP_POSITION_EFFECT_CLOSE).build();
             boolean invoke = tradeApi.sellOrBuy(req, user, placementId);
             LOGGER.info("sell invoke {} ", invoke);
             return invoke;
@@ -114,40 +101,17 @@ public class XtpService implements BrokerService {
      * @param type
      * @return
      */
-    private boolean checkRequestParam(String user, Long placementId, Stock stock, Long quantity, BigDecimal price, PriceType priceType, String type) {
-        if (Optional.ofNullable(user).filter(user1 -> !StringUtils.isEmpty(user1)).isEmpty()) {
-            LOGGER.error("{} error, User invalid, user : {}", type, user);
-            return false;
-        }
-        if (Optional.ofNullable(placementId).filter(placementId1 -> placementId1 != 0L).isEmpty()) {
-            LOGGER.error("{} error, PlacementId invalid, placementId : {}", type, placementId);
-            return false;
-        }
-        if (Optional.ofNullable(stock).map(stock1 -> stock1.getName()).filter(name -> !StringUtils.isEmpty(name)).isEmpty()) {
-            LOGGER.error("{} error, Stock invalid, stock.name : {} ", type, stock.getName());
-            return false;
-        }
-        if (Optional.ofNullable(priceType).isEmpty()) {
-            LOGGER.error("{} error, priceType invalid, priceType : {}", type, priceType);
-            return false;
-        }
-        if (Optional.ofNullable(price).filter(price1 -> price1.compareTo(new BigDecimal("0")) > 0).isEmpty()) {
-            LOGGER.error("{} error, Price invalid, price : {}", type, price);
-            return false;
-        }
-        if (Optional.ofNullable(quantity).filter(quantity1 -> quantity1 != 0L).isEmpty()) {
-            LOGGER.error("{} error, Quantity invalid, quantity : {}", type, quantity);
-            return false;
-        }
+    private boolean checkRequestParam(String user, Long placementId, Stock stock, Long quantity, BigDecimal price,
+        PriceType priceType, String type) {
         return true;
     }
 
     @Override
     public boolean init() {
-        if(!tradeInit && tradeApi.init()){
+        if (!tradeInit && tradeApi.init()) {
             tradeInit = true;
         }
-        if(!quoteInit && quoteApi.init()){
+        if (!quoteInit && quoteApi.init()) {
             quoteInit = true;
         }
         return tradeInit && quoteInit;
@@ -155,7 +119,7 @@ public class XtpService implements BrokerService {
 
     @Override
     public boolean loginUser(String user, String password, Map<String, String> additional) {
-        if(!tradeInit && !init()){
+        if (!tradeInit && !init()) {
             LOGGER.error("loginUser invoke failed, user:{}, reason:{}", user, "Xtp TradeApi Uninitialized");
             return false;
         }
@@ -170,8 +134,8 @@ public class XtpService implements BrokerService {
 
     @Override
     public boolean subscribePrice(Stock stock) {
-        if(!quoteInit && !init()){
-            LOGGER.error("subscribePrice invoke failed, reason:{}",  "Xtp QuoteApi Uninitialized");
+        if (!quoteInit && !init()) {
+            LOGGER.error("subscribePrice invoke failed, reason:{}", "Xtp QuoteApi Uninitialized");
             return false;
         }
         this.quoteApi.subscribePrice(stock.getName(), TickerHelper.getMarket(stock.getName()));

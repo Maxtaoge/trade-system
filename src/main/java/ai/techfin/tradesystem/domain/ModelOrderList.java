@@ -2,15 +2,26 @@ package ai.techfin.tradesystem.domain;
 
 import ai.techfin.tradesystem.aop.validation.group.PERSIST;
 import ai.techfin.tradesystem.domain.enums.TradeType;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import javax.persistence.*;
-import javax.validation.constraints.NotNull;
-import javax.validation.constraints.Null;
 import java.time.Instant;
 import java.util.Set;
 import java.util.stream.Collectors;
+import javax.persistence.CollectionTable;
+import javax.persistence.Column;
+import javax.persistence.ElementCollection;
+import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.JoinTable;
+import javax.persistence.ManyToOne;
+import javax.persistence.OneToOne;
+import javax.persistence.Table;
+import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Null;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Entity
 @Table(name = "model_order_list")
@@ -30,22 +41,18 @@ public class ModelOrderList {
     private Instant createdAt = Instant.now();
 
     @ElementCollection(targetClass = ModelOrder.class, fetch = FetchType.EAGER)
-    @CollectionTable(name = "model_order_list_data",
-                     joinColumns = @JoinColumn(name = "list_id", referencedColumnName = "id"))
+    @CollectionTable(name = "model_order_list_data", joinColumns = @JoinColumn(name = "list_id", referencedColumnName = "id"))
     private Set<ModelOrder> orders;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinTable(name = "product_orders",
-               joinColumns = @JoinColumn(name = "order_id", referencedColumnName = "id"),
-               inverseJoinColumns = @JoinColumn(name = "product_id", referencedColumnName = "id"))
+    @JoinTable(name = "product_orders", joinColumns = @JoinColumn(name = "order_id", referencedColumnName = "id"), inverseJoinColumns = @JoinColumn(name = "product_id", referencedColumnName = "id"))
     private Product product;
 
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "placement_list_id", referencedColumnName = "id")
     private PlacementList placementList = null;
 
-    public ModelOrderList(String model, Product product,
-                          @NotNull Set<ModelOrder> orders) {
+    public ModelOrderList(String model, Product product, @NotNull Set<ModelOrder> orders) {
         log.debug("A model order list is created with full data");
         this.model = model;
         this.orders = orders;
@@ -57,15 +64,11 @@ public class ModelOrderList {
     }
 
     public Set<ModelOrder> getSellList() {
-        return orders.stream()
-            .filter(order -> order.getTradeType() == TradeType.SELL)
-            .collect(Collectors.toSet());
+        return orders.stream().filter(order -> order.getTradeType() == TradeType.SELL).collect(Collectors.toSet());
     }
 
     public Set<ModelOrder> getBuyList() {
-        return orders.stream()
-            .filter(order -> order.getTradeType() == TradeType.BUY)
-            .collect(Collectors.toSet());
+        return orders.stream().filter(order -> order.getTradeType() == TradeType.BUY).collect(Collectors.toSet());
     }
 
     public Instant getCreatedAt() {
@@ -76,14 +79,16 @@ public class ModelOrderList {
         this.createdAt = createdAt;
     }
 
-    public PlacementList getPlacementList() { return placementList; }
+    public PlacementList getPlacementList() {
+        return placementList;
+    }
 
     public void setPlacementList(PlacementList placementList) {
         if (placementList == this.placementList) {
             return;
         }
 
-        var origin = this.placementList;
+        PlacementList origin = this.placementList;
         if (placementList == null) {
             this.placementList = null;
             if (origin.getModelOrderList() == this) {
